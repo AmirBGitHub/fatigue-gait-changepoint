@@ -77,6 +77,8 @@ for sbjct = 1:15
     xlabel('segments')
     ylabel('stide duration')
 
+    saveas(gcf,['./output/Subject', num2str(m),'.jpg']);
+
 end
 
 
@@ -174,10 +176,10 @@ function [M_i_k, Seg_points_S, Seg_points_E] = process_segment_3h(Data_in,Sampli
     end
 
     % Metrics Segmentation
-    Velocity = sqrt(Vel{1,1}.^2 + Vel{1,2}.^2 + Vel{1,3}.^2);
-    Jerk = sqrt(Jrk{1,1}.^2 + Jrk{1,2}.^2 + Jrk{1,3}.^2);
-
-    m = [Pos{1,1}(2:end), Pos{1,2}(2:end), t(2:end), Velocity(2:end), t(2:end), Acceleration_filt_magn(2:end), t(2:end), Jerk, filtered_angle(2:end,1), filtered_angle(2:end,2), filtered_angle(2:end,1), unbiased_gyro(2:end,1), filtered_angle(2:end,2), unbiased_gyro(2:end,2),filtered_angle(2:end,3), unbiased_gyro(2:end,3), t(2:end)];
+    Velocity = mag(cell2mat(Vel),1);
+    Jerk = mag(cell2mat(Jrk),1);
+    
+    m = [Pos{1,1}(2:end), Pos{1,2}(2:end), Pos{1,3}(2:end), t(2:end), Velocity(2:end), t(2:end), Acceleration_filt_magn(2:end), t(2:end), Jerk, filtered_angle(2:end,1), filtered_angle(2:end,2), filtered_angle(2:end,1), unbiased_gyro(2:end,1), filtered_angle(2:end,2), unbiased_gyro(2:end,2),filtered_angle(2:end,3), unbiased_gyro(2:end,3), t(2:end)];
     
     SegStep = Seg_points_E-Seg_points_S;
     
@@ -195,29 +197,38 @@ function [M_i_k, Seg_points_S, Seg_points_E] = process_segment_3h(Data_in,Sampli
             %end
         end
     end
-        
-        % rotate and reflect the position data to get the actual values 
+    
+    
     for i = 1:length(M_i_k(:,1))
-        % define the x- and y-data for the original line we would like to rotate
-        x = M_i_k{i,1}';
-        y = M_i_k{i,2}';
-        % create a matrix of these points, which will be useful in future calculations
-        v = [x;y];
-        % choose a point which will be the center of rotation
-        x_center = x(1);
-        y_center = y(1);
-        % create a matrix which will be used later in calculations
-        center = repmat([x_center; y_center], 1, length(x));
-        % define a degree counter-clockwise rotation matrix
-        theta = -atan2(M_i_k{i,2}(end)-M_i_k{i,2}(1), M_i_k{i,1}(end)-M_i_k{i,1}(1));       % rotation angle
-        R = [cos(theta) -sin(theta); sin(theta) cos(theta)];
-        % do the rotation...
-        s = v - center;     % shift points in the plane so that the center of rotation is at the origin
-        so = R*s;           % apply the rotation about the origin
-        vo = so + center;   % shift again so the origin goes back to the desired center of rotation
-        M_i_k{i,1} = 2*vo(1,:)';
-        M_i_k{i,2} = -2*vo(2,:)';
+        x = M_i_k{i,1};
+        y = M_i_k{i,2};
+        z = M_i_k{i,3};
+        
+        sf = fit([x, y],z,'poly11');
+%         plot(sf,[x,y],z)
+%         axis equal
+        
+        x_SP = ([x(end),y(end),z(end)]-[x(1),y(1),z(1)])./norm([x(end),y(end),z(end)]-[x(1),y(1),z(1)]);
+        z_SP = [sf.p10,sf.p01,-1]./norm([sf.p10,sf.p01,-1]);  
+        y_SP = cross(x_SP,z_SP);
+%         hold on
+%         plot3(linspace(0,x_SP(1),10),linspace(0,x_SP(2),10),linspace(0,x_SP(3),10),'r*','linewidth',5)
+%         hold on
+%         plot3(linspace(0,y_SP(1),10),linspace(0,y_SP(2),10),linspace(0,y_SP(3),10),'r*','linewidth',5)
+%         hold on
+%         plot3(linspace(0,z_SP(1),10),linspace(0,z_SP(2),10),linspace(0,z_SP(3),10),'r*','linewidth',5)
+
+        M = [x_SP;y_SP;z_SP];
+        xyz_SP = M*[x,y,z]';
+% 
+%         figure;
+%         plot(xyz_SP(1,:),xyz_SP(2,:))
+        
+        M_i_k{i,1} = 2*xyz_SP(1,:);
+        M_i_k{i,2} = xyz_SP(2,:);
     end
+    
+    M_i_k(:,3)=[];    
 end
 
 
@@ -879,4 +890,11 @@ rotation_mat = R;
 end
 
 
-
+function N = mag(T,n)
+% MAGNATUDE OF A VECTOR (Nx3)
+%  M = mag(U)
+N = sum(abs(T).^2,2).^(1/2);
+d = find(N==0); 
+N(d) = eps*ones(size(d));
+N = N(:,ones(n,1));  
+end
