@@ -1,4 +1,4 @@
-# fatigue-gait-changepoint
+# fatigue-gait-segmentation
 
 Segment Gait Acceleration Data
 
