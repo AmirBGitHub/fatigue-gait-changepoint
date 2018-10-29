@@ -1,3 +1,9 @@
+% Release: $Name: Gait Segmentation 1.1 $
+% $Revision: 1.1 $
+% $Date: 2018-07-10 20:05:12 $
+
+% Copyright (c) 2018, Amir Baghdadi.  All rights reserved.
+
 clear all;close all;clc
 SamplingRate = 51.2;
 SubjHeight = [1.71 1.77 1.71 1.59 1.69 1.63 1.60 1.71 1.67 1.78 1.68 1.55 1.83 1.81 1.89];       
